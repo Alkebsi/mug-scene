@@ -180,16 +180,27 @@ class Mug {
       optionD: './bg4.jpg'
     };
     
+    this.alphaMap = this.textureLoader.load('./alphaMap.png');
+    
     this.mugMap = this.textureLoader.load(this.matTextures.optionA);
     this.mugMap.colorSpace = THREE.SRGBColorSpace;
     this.mugMap.flipY = false;
     
+    this.mugColor = '#5c240f';
+    
     this.mugMat = new THREE.MeshStandardMaterial({
-      map: this.mugMap,
-      color: 0xffffff,
+      color: this.mugColor,
       roughness: 0.5,
       metalness: 0.1
     });
+    this.mugCloneMat = new THREE.MeshStandardMaterial({
+      map: this.mugMap,
+      alphaMap: this.alphaMap,
+      transparent: true,
+      roughness: this.mugMat.roughness,
+      metalness: this.mugMat.metalness
+    });
+    
     
     this.envMat = new THREE.MeshStandardMaterial({
       color: 0x20201d
@@ -197,14 +208,17 @@ class Mug {
     
     // Loading the Mug
     this.gltfLoader.load('./mug.glb', (gltf) => {
-      gltf.scene.traverse((model) => {
-        model.material = this.mugMat; 
-      });
+      const mug = gltf.scene.children[0];
+      mug.material = this.mugMat;
+      mug.position.y = -0.05;
       
-      gltf.scene.position.y = -0.05;
-      gltf.scene.scale.set(1.3, 1.3, 1.3);
+      const mugClone = mug.clone();
+      const scale = 1.002;
       
-      this.scene.add(gltf.scene)
+      mugClone.scale.set(scale, scale, scale);
+      mugClone.material = this.mugCloneMat;
+      
+      this.scene.add(mug, mugClone);
     });
     
     // Loading the Environment
@@ -223,9 +237,21 @@ class Mug {
     this.tests.mug = this.tests.gui.addFolder('Mug');
     
     this.tests.mug
-      .add(this.mugMat, 'roughness', 0, 1, 0.001);
+      .add(this.mugMat, 'roughness', 0, 1, 0.001)
+      .onChange(() => {
+        this.mugCloneMat.roughness = this.mugMat.roughness;
+      });
     this.tests.mug
-      .add(this.mugMat, 'metalness', 0, 1, 0.001);
+      .add(this.mugMat, 'metalness', 0, 1, 0.001)
+      .onChange(() => {
+        this.mugCloneMat.metalness = this.mugMat.metalness;
+      });
+    
+    this.tests.mug
+      .addColor(this, 'mugColor')
+      .onChange(() => {
+        this.mugMat.color.set(this.mugColor);
+      });
     
     this.tests.mug
       .add(this, 'matTextures', this.matTextures)
@@ -234,7 +260,7 @@ class Mug {
         this.mugMap.colorSpace = THREE.SRGBColorSpace;
         this.mugMap.flipY = false;
         
-        this.mugMat.map = this.mugMap;
+        this.mugCloneMat.map = this.mugMap;
       });
   }
 }
